@@ -2,14 +2,18 @@ import json
 import psycopg2
 from datetime import datetime
 import sys
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 # Настройки подключения к БД
 DB_CONFIG = {
-    "host": "localhost",
-    "port": 5432,
-    "database": "postgres",
-    "user": "postgres",
-    "password": "123456"
+    "host": os.getenv("DB_HOST"),
+    "port": os.getenv("DB_PORT"),
+    "database": os.getenv("DB_NAME"),
+    "user": os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASSWORD")
 }
 
 def connect_db():
