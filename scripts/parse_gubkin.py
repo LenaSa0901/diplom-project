@@ -1,7 +1,10 @@
 import requests
 import json
 import sys
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 sys.stdout.reconfigure(line_buffering=True)
 
 def fetch_data(group_id):
@@ -22,7 +25,7 @@ def fetch_data(group_id):
     return data.get("data", [])
 
 if __name__ == "__main__":
-    group_id = 2457
+    group_id = int(os.getenv("CONTEST_GROUP_ID", 2457))
     records = fetch_data(group_id)
     print(f"Загружено записей: {len(records)}")
     

@@ -2,8 +2,8 @@ import json
 import psycopg2
 from datetime import datetime
 import sys
-from dotenv import load_dotenv
 import os
+from dotenv import load_dotenv
 
 load_dotenv()
 
