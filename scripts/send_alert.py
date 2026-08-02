@@ -19,8 +19,8 @@ DB_CONFIG = {
 }
 
 APPLICANT_ID = os.getenv("APPLICANT_ID")
-CONTEST_GROUP_ID = int(os.getenv("CONTEST_GROUP_ID", 2457))
-BUDGET_PLACES = int(os.getenv("BUDGET_PLACES", 25))
+CONTEST_GROUP_ID = int(os.getenv("CONTEST_GROUP_ID") or 2457)
+BUDGET_PLACES = int(os.getenv("BUDGET_PLACES") or 25)
 
 EMAIL_SENDER = os.getenv("EMAIL_SENDER")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
@@ -88,7 +88,7 @@ def send_email_alert(position, total_balls, load_date):
         print(f"❌ Ошибка отправки письма: {e}")
 
 # --- Основной блок ---
-if __name__ == "__main__":
+def main():
     if not EMAIL_SENDER or not EMAIL_PASSWORD:
         print("❌ Не настроены EMAIL_SENDER или EMAIL_PASSWORD в .env")
         sys.exit(1)
@@ -110,3 +110,6 @@ if __name__ == "__main__":
         send_email_alert(position, total_balls, load_date)
     else:
         print("✅ Всё хорошо, позиция в пределах бюджета")
+
+if __name__ == "__main__":
+    main()

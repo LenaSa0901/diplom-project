@@ -1,0 +1,176 @@
+version: '3.8'
+
+services:
+  # ========== БД ДЛЯ AIRFLOW (отдельная от вашей основной) ==========
+  postgres_airflow:
+    image: postgres:15
+    container_name: postgres_airflow
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    ports:
+      - "5433:5432"  # Используем другой порт, чтобы не конфликтовать с вашей БД
+    volumes:
+      - postgres_airflow_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      interval: 5s
+      retries: 5
+
+  # ========== REDIS ДЛЯ CELERY ==========
+  redis:
+    image: redis:7
+    container_name: redis_airflow
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 5
+
+  # ========== WEBSERVER ==========
+  airflow-webserver:
+    image: apache/airflow:2.9.0
+    container_name: airflow-webserver
+    command: webserver
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres_airflow:5432/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres_airflow:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__WEBSERVER__DEFAULT_UI_TIMEZONE: 'Europe/Moscow'
+      AIRFLOW__CORE__DEFAULT_TIMEZONE: 'Europe/Moscow'
+      AIRFLOW__CORE__ENABLE_XCOM_PICKLING: 'true'
+      # Проксируем переменные окружения для скриптов
+      DB_HOST: host.docker.internal
+      DB_PORT: 5432
+      DB_NAME: postgres
+      DB_USER: postgres
+      DB_PASSWORD: ${DB_PASSWORD}
+      CONTEST_GROUP_ID: ${CONTEST_GROUP_ID}
+      APPLICANT_ID: ${APPLICANT_ID}
+      BUDGET_PLACES: ${BUDGET_PLACES}
+      EMAIL_SENDER: ${EMAIL_SENDER}
+      EMAIL_PASSWORD: ${EMAIL_PASSWORD}
+      EMAIL_RECEIVER: ${EMAIL_RECEIVER}
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./scripts:/opt/airflow/scripts
+      - ./logs:/opt/airflow/logs
+      - ./.env:/opt/airflow/.env
+      - ./data:/opt/airflow/data  
+    depends_on:
+      postgres_airflow:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  
+
+  # ========== SCHEDULER ==========
+  airflow-scheduler:
+    image: apache/airflow:2.9.0
+    container_name: airflow-scheduler
+    command: scheduler
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres_airflow:5432/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres_airflow:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__CORE__DEFAULT_TIMEZONE: 'Europe/Moscow'
+      DB_HOST: host.docker.internal
+      DB_PORT: 5432
+      DB_NAME: postgres
+      DB_USER: postgres
+      DB_PASSWORD: ${DB_PASSWORD}
+      CONTEST_GROUP_ID: ${CONTEST_GROUP_ID}
+      APPLICANT_ID: ${APPLICANT_ID}
+      BUDGET_PLACES: ${BUDGET_PLACES}
+      EMAIL_SENDER: ${EMAIL_SENDER}
+      EMAIL_PASSWORD: ${EMAIL_PASSWORD}
+      EMAIL_RECEIVER: ${EMAIL_RECEIVER}
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./scripts:/opt/airflow/scripts
+      - ./logs:/opt/airflow/logs
+      - ./.env:/opt/airflow/.env
+      - ./data:/opt/airflow/data
+    depends_on:
+      postgres_airflow:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # ========== WORKER ==========
+  airflow-worker:
+    image: apache/airflow:2.9.0
+    container_name: airflow-worker
+    command: celery worker
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres_airflow:5432/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres_airflow:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__CORE__DEFAULT_TIMEZONE: 'Europe/Moscow'
+      DB_HOST: host.docker.internal
+      DB_PORT: 5432
+      DB_NAME: postgres
+      DB_USER: postgres
+      DB_PASSWORD: ${DB_PASSWORD}
+      CONTEST_GROUP_ID: ${CONTEST_GROUP_ID}
+      APPLICANT_ID: ${APPLICANT_ID}
+      BUDGET_PLACES: ${BUDGET_PLACES}
+      EMAIL_SENDER: ${EMAIL_SENDER}
+      EMAIL_PASSWORD: ${EMAIL_PASSWORD}
+      EMAIL_RECEIVER: ${EMAIL_RECEIVER}
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./scripts:/opt/airflow/scripts
+      - ./logs:/opt/airflow/logs
+      - ./.env:/opt/airflow/.env
+      - ./data:/opt/airflow/data
+    depends_on:
+      postgres_airflow:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # ========== INIT (инициализация БД) ==========
+  airflow-init:
+    image: apache/airflow:2.9.0
+    container_name: airflow-init
+    command: >
+      bash -c "
+      airflow db migrate &&
+      airflow users create
+        --username admin
+        --password admin
+        --firstname Admin
+        --lastname Admin
+        --role Admin
+        --email admin@example.com
+      "
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres_airflow:5432/airflow
+    depends_on:
+      postgres_airflow:
+        condition: service_healthy
+    restart: on-failure
+
+volumes:
+  postgres_airflow_data:

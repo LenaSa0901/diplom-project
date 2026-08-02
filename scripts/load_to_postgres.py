@@ -89,7 +89,7 @@ def load_subject_scores(conn, records, group_id, load_date):
     print(f"  Вставлено {inserted} записей в subject_scores")
     cursor.close()
 
-if __name__ == "__main__":
+def main():
     group_id = 2457
     load_date = datetime.now()
     
@@ -107,3 +107,6 @@ if __name__ == "__main__":
     
     conn.close()
     print("Готово!")
+
+if __name__ == "__main__":
+    main()

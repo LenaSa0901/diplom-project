@@ -5,7 +5,6 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
-sys.stdout.reconfigure(line_buffering=True)
 
 def fetch_data(group_id):
     base_url = "https://transfer.priem.gubkin.ru/abiturients_list/api/api.php"
@@ -24,16 +23,19 @@ def fetch_data(group_id):
     data = resp.json()
     return data.get("data", [])
 
-if __name__ == "__main__":
-    group_id = int(os.getenv("CONTEST_GROUP_ID", 2457))
+def main():
+    """Основная функция для вызова из Airflow"""
+    group_id = int(os.getenv("CONTEST_GROUP_ID") or 2457)
     records = fetch_data(group_id)
     print(f"Загружено записей: {len(records)}")
     
     if records:
-        print("\nПример записи:")
-        print(json.dumps(records[0], indent=2, ensure_ascii=False))
-        with open(f"raw_data_{group_id}.json", "w", encoding="utf-8") as f:
+        filename = f"raw_data_{group_id}.json"
+        with open(filename, "w", encoding="utf-8") as f:
             json.dump(records, f, indent=2, ensure_ascii=False)
-        print(f"\nДанные сохранены в raw_data_{group_id}.json")
+        print(f"Данные сохранены в {filename}")
     else:
         print("Данные не получены")
+
+if __name__ == "__main__":
+    main()
