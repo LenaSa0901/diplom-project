@@ -41,14 +41,35 @@ def connect_db():
 
 def get_current_position(conn):
     cursor = conn.cursor()
-    sql = """
-    SELECT position, total_balls, load_date
-    FROM applicants
-    WHERE applicant_id = %s AND contest_group_id = %s
-    ORDER BY load_date DESC
-    LIMIT 1
+    # Получаем дату последней загрузки для данной специальности
+    sql_latest_date = """
+        SELECT MAX(load_date)
+        FROM applicants
+        WHERE contest_group_id = %s
     """
-    cursor.execute(sql, (APPLICANT_ID, CONTEST_GROUP_ID))
+    cursor.execute(sql_latest_date, (CONTEST_GROUP_ID,))
+    latest_date = cursor.fetchone()[0]
+    if not latest_date:
+        return None
+
+    # Вычисляем позицию только среди тех, у кого agreement = true
+    sql = """
+        WITH ranked AS (
+            SELECT 
+                applicant_id,
+                total_balls,
+                load_date,
+                ROW_NUMBER() OVER (ORDER BY total_balls DESC) AS calculated_position
+            FROM applicants
+            WHERE contest_group_id = %s
+              AND enrollment_agreement = true
+              AND load_date = %s
+        )
+        SELECT calculated_position, total_balls, load_date
+        FROM ranked
+        WHERE applicant_id = %s
+    """
+    cursor.execute(sql, (CONTEST_GROUP_ID, latest_date, APPLICANT_ID))
     result = cursor.fetchone()
     cursor.close()
     return result

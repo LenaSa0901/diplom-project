@@ -13,7 +13,7 @@ import send_alert
 default_args = {
     'owner': 'otus',
     'depends_on_past': False,
-    'start_date': datetime(2026, 8, 1),
+    'start_date': datetime(2026, 8, 4),
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
 }
@@ -22,7 +22,7 @@ dag = DAG(
     'check_pipeline',
     default_args=default_args,
     description='ETL для мониторинга рейтинга абитуриентов',
-    schedule_interval='@daily',
+    schedule_interval='@hourly',
     catchup=False,
     tags=['otus', 'diplom'],
 )

@@ -32,3 +32,23 @@ CREATE TABLE IF NOT EXISTS subject_scores (
 -- Индексы
 CREATE INDEX idx_applicants_id ON applicants(applicant_id);
 CREATE INDEX idx_applicants_position ON applicants(position);
+
+--Представление, которое показывает позицию по согласиям на последнюю дату
+CREATE OR REPLACE VIEW current_ranking AS
+WITH latest_load AS (
+    SELECT MAX(load_date) AS max_date
+    FROM applicants
+    WHERE contest_group_id = 2457
+),
+ranked AS (
+    SELECT 
+        applicant_id,
+        total_balls,
+        load_date,
+        ROW_NUMBER() OVER (ORDER BY total_balls DESC) AS position
+    FROM applicants
+    WHERE contest_group_id = 2457
+      AND enrollment_agreement = true
+      AND load_date = (SELECT max_date FROM latest_load)
+)
+SELECT * FROM ranked;
