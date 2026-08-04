@@ -52,3 +52,14 @@ ranked AS (
       AND load_date = (SELECT max_date FROM latest_load)
 )
 SELECT * FROM ranked;
+
+--Представление, которое для каждой даты пересчитывает позицию только по подавшим согласие
+CREATE OR REPLACE VIEW daily_agreed_ranking AS
+SELECT 
+    applicant_id,
+    total_balls,
+    load_date,
+    ROW_NUMBER() OVER (PARTITION BY load_date ORDER BY total_balls DESC) AS position_agreed
+FROM applicants
+WHERE enrollment_agreement = true
+  AND contest_group_id = 2457;

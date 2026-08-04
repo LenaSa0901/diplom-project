@@ -1,3 +1,4 @@
+superset_data/
 logs/
 .env
 *.json

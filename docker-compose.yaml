@@ -1,16 +1,16 @@
 version: '3.8'
 
 services:
-  # ========== БД ДЛЯ AIRFLOW (отдельная от вашей основной) ==========
+  # ========== БД ДЛЯ AIRFLOW ==========
   postgres_airflow:
     image: postgres:15
     container_name: postgres_airflow
     environment:
       POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
+      POSTGRES_PASSWORD: ${AIRFLOW_DB_PASSWORD}
       POSTGRES_DB: airflow
     ports:
-      - "5433:5432"  # Используем другой порт, чтобы не конфликтовать с вашей БД
+      - "5433:5432"
     volumes:
       - postgres_airflow_data:/var/lib/postgresql/data
     restart: unless-stopped
@@ -38,9 +38,9 @@ services:
     command: webserver
     environment:
       AIRFLOW__CORE__EXECUTOR: CeleryExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres_airflow:5432/airflow
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:${AIRFLOW_DB_PASSWORD}@postgres_airflow:5432/airflow
       AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
-      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres_airflow:5432/airflow
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:${AIRFLOW_DB_PASSWORD}@postgres_airflow:5432/airflow
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__WEBSERVER__DEFAULT_UI_TIMEZONE: 'Europe/Moscow'
       AIRFLOW__CORE__DEFAULT_TIMEZONE: 'Europe/Moscow'
@@ -81,7 +81,7 @@ services:
     command: scheduler
     environment:
       AIRFLOW__CORE__EXECUTOR: CeleryExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres_airflow:5432/airflow
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:${AIRFLOW_DB_PASSWORD}@postgres_airflow:5432/airflow
       AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
       AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres_airflow:5432/airflow
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
@@ -119,7 +119,7 @@ services:
     command: celery worker
     environment:
       AIRFLOW__CORE__EXECUTOR: CeleryExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres_airflow:5432/airflow
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:${AIRFLOW_DB_PASSWORD}@postgres_airflow:5432/airflow
       AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
       AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres_airflow:5432/airflow
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
@@ -166,7 +166,7 @@ services:
         --email admin@example.com
       "
     environment:
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres_airflow:5432/airflow
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:${AIRFLOW_DB_PASSWORD}@postgres_airflow:5432/airflow
     depends_on:
       postgres_airflow:
         condition: service_healthy
